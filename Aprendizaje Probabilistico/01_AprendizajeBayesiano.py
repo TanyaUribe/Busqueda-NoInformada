@@ -1,44 +1,29 @@
+"""
+El aprendizaje bayesiano es un enfoque que combina el razonamiento probabilístico con el 
+aprendizaje automático para modelar la incertidumbre y realizar inferencias sobre datos observados. 
+"""
 
-import nltk
-from nltk.corpus import movie_reviews
-from nltk.classify import NaiveBayesClassifier
-from nltk.classify.util import accuracy
+#pip install pymc3
 
-nltk.download("movie_reviews")
+import pymc3 as pm
+import numpy as np
+import matplotlib.pyplot as plt
 
-# Obtén las revisiones de películas y etiquetas
-documents = [(list(movie_reviews.words(fileid)), category)
-             for category in movie_reviews.categories()
-             for fileid in movie_reviews.fileids(category)]
+# Datos observados
+datos_observados = np.random.normal(5, 2, 100)
 
-# Mezcla los documentos
-import random
-random.shuffle(documents)
+# Modelo bayesiano
+with pm.Model() as modelo:
+    # Prior para la media y la desviación estándar
+    media = pm.Normal("media", mu=0, sd=10)
+    desviacion_estandar = pm.HalfNormal("desviacion_estandar", sd=10)
 
-# Define una función para extraer características de un documento
-def document_features(document):
-    document_words = set(document)
-    features = {}
-    for word in word_features:
-        features['contains(%s)' % word] = (word in document_words)
-    return features
+    # Likelihood (verosimilitud) de los datos
+    likelihood = pm.Normal("likelihood", mu=media, sd=desviacion_estandar, observed=datos_observados)
 
-# Obtén las palabras más frecuentes en las documentos
-all_words = nltk.FreqDist(w.lower() for w in movie_reviews.words())
-word_features = list(all_words.keys())[:2000]
+    # Muestreo de la posterior
+    traza = pm.sample(1000, tune=1000, cores=1)
 
-# Crea conjuntos de entrenamiento y prueba
-featuresets = [(document_features(d), c) for (d, c) in documents]
-train_set, test_set = featuresets[:1500], featuresets[1500:]
-
-# Entrena un clasificador de Bayes ingenuo
-classifier = NaiveBayesClassifier.train(train_set)
-
-# Evalúa el clasificador
-print("Exactitud del clasificador:", accuracy(classifier, test_set))
-
-# Ejemplo de clasificación
-text_to_classify = "This movie was great!"
-features = document_features(text_to_classify.split())
-result = classifier.classify(features)
-print("Clasificación:", result)
+# Visualizar los resultados
+pm.traceplot(traza)
+plt.show()
